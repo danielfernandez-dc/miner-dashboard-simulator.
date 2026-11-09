@@ -7,13 +7,14 @@ export interface Finding {
   key: string; ruleId?: string; title: string; summary: string; steps: Step[];
   procedureStatus?: 'draft' | 'approved'; evidence: string; timestamp: string; repeats: number;
 }
-export interface Analysis { findings: Finding[]; parsed: number; skipped: number; recovered: boolean }
+export interface Analysis { findings: Finding[]; parsed: number; skipped: number; recovered: boolean; unknownEntries: LogEntry[] }
 export function parseLine(raw: string): LogEntry | null {
   const m = /^\[([^\]]+)\]\s+(INFO|ERROR|WARN|WARNING|DEBUG|FATAL)\s+(\w[\w.-]*):\s*(.+)$/i.exec(raw.trim());
   return m ? {timestamp: m[1]!, level: m[2]!.toLowerCase(), source: m[3]!.toLowerCase(), message: m[4]!, raw} : null;
 }
 export function analyze(text: string, library: RuleLibrary): Analysis {
   const active = new Map<string, Finding>();
+  const unknownEntries: LogEntry[] = [];
   let parsed = 0, skipped = 0, recovered = false;
   const rules = library.rules.map(rule => ({rule, regex: new RegExp(rule.match.pattern, rule.match.flags)}));
   const recoveries = library.recoveryRules.map(rule => ({rule, regex: new RegExp(rule.match.pattern, rule.match.flags)}));
@@ -45,6 +46,7 @@ export function analyze(text: string, library: RuleLibrary): Analysis {
       active.set(key, {key, ruleId: rule.id, title: fill(rule.title), summary: fill(rule.summary), steps: rule.steps.map(s => ({id: s.id, title: fill(s.title), instruction: fill(s.instruction)})), procedureStatus: rule.procedureStatus, evidence: raw, timestamp: entry.timestamp, repeats});
     }
     if (!matched) {
+      unknownEntries.push(entry);
       const key = `unknown:${entry.source}:${entry.message}`;
       const repeats = (active.get(key)?.repeats ?? 0) + 1;
       active.delete(key);
@@ -52,5 +54,5 @@ export function analyze(text: string, library: RuleLibrary): Analysis {
     }
     recovered = false;
   }
-  return {findings: Array.from(active.values()).reverse(), parsed, skipped, recovered};
+  return {findings: Array.from(active.values()).reverse(), parsed, skipped, recovered, unknownEntries};
 }

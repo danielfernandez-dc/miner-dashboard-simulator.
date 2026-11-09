@@ -11,7 +11,7 @@ const library = libraryJson as RuleLibrary;
 const line = (message: string, level = 'ERROR', source = 'miner') => `[2026-11-09 10:24:11.000] ${level} ${source}: ${message}`;
 describe('diagnostic analysis', () => {
   it('recognizes all five real simulator scenarios and fills every step', () => {
-    for (const scenario of Object.keys(scenarios).filter(k => k !== 'healthy')) {
+    for (const scenario of Object.keys(scenarios).filter(k => !['healthy', 'unknown'].includes(k))) {
       const sim = createSimulator(); sim.setScenario(scenario);
       const result = analyze(logText(sim.state.logs), library);
       expect(result.findings).toHaveLength(1);
@@ -53,4 +53,17 @@ describe('diagnostic analysis', () => {
   it('resets active history at a new boot within the retained buffer', () => {
     expect(analyze([line(scenarios.chain[3]), line('Linux boot: new session', 'INFO', 'system')].join('\n'), library).findings).toHaveLength(0);
   });
+});
+
+it('retains unknown entries for archiving even if a later boot clears the screen', () => {
+  const result = analyze([line('Unrecognized fault'), line('Linux boot: new session', 'INFO', 'system')].join('\n'), library);
+  expect(result.findings).toHaveLength(0);
+  expect(result.unknownEntries).toHaveLength(1);
+});
+
+it('archives the simulator’s deliberately unregistered fault', () => {
+  const sim = createSimulator(); sim.setScenario('unknown');
+  const result = analyze(logText(sim.state.logs), library);
+  expect(result.unknownEntries).toHaveLength(1);
+  expect(result.findings[0]?.ruleId).toBeUndefined();
 });
