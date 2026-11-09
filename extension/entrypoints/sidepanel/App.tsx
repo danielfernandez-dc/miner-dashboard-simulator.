@@ -56,7 +56,7 @@ export function App() {
         try {
           const incoming = await makeUnknownErrors(analysis.unknownEntries, snapshot.origin, snapshot.name);
           const saved = await browser.runtime.sendMessage({type: 'atlas:archive-errors', archive: incoming});
-          if (saved?.error) throw new Error(saved.error);
+          if (saved?.error || !saved?.archive) throw new Error(saved?.error ?? 'Unknown-error storage did not confirm the save.');
         } catch {if (generation === request.current) setWarning('The diagnosis is available, but unknown errors could not be saved. Read again to retry.');}
       }
     } catch (e) {
