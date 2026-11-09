@@ -1,0 +1,7 @@
+node_modules/
+.vercel/
+.DS_Store
+
+# Local export and preview artifacts
+miner-simulator-preview.png
+miner-simulator-vercel.zip
