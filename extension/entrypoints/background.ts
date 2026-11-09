@@ -1,14 +1,24 @@
-/** Opens Atlas directly from Chrome's action click, which grants temporary page
- * access. The click handler opens synchronously to preserve the required gesture;
- * diagnostic data remains inside the panel rather than the service worker. */
+/** Coordinates toolbar toggling and origin-scoped cache removal via the panel
+ * controller. It also serializes unknown-error storage across panel windows;
+ * filesystem access is explicitly selected and managed by the panel itself. */
 import { browser } from 'wxt/browser';
 import { defineBackground } from 'wxt/utils/define-background';
+import { installPanelController } from '../features/panel/controller';
+import { appendUnknownErrors, validateArchive } from '../features/errors/archive';
 
 export default defineBackground(() => {
-  // Handle the action explicitly so opening the panel also grants activeTab.
-  void browser.sidePanel.setPanelBehavior({openPanelOnActionClick: false});
-  browser.action.onClicked.addListener(tab => {
-    if (tab.id === undefined) return;
-    void browser.sidePanel.open({tabId: tab.id}).catch(console.error);
+  const prepareRead = installPanelController();
+  browser.runtime.onMessage.addListener((message, sender, sendResponse) => {
+    if (sender.id !== browser.runtime.id) return;
+    // sendResponse + true also supports Chrome 142–147 (Promise replies need 148).
+    if (message?.type === 'atlas:prepare-read') {
+      void prepareRead().then(sendResponse).catch(() => sendResponse({status: 'failed', completedAt: Date.now(), message: 'Unable to clear the current website cache.'}));
+      return true;
+    }
+    if (message?.type === 'atlas:archive-errors') {
+      try {validateArchive(message.archive);} catch {sendResponse({error: 'Invalid unknown-error data.'}); return;}
+      void appendUnknownErrors(message.archive).then(archive => sendResponse({archive})).catch(() => sendResponse({error: 'Unable to save unknown errors in Chrome. Please retry.'}));
+      return true;
+    }
   });
 });

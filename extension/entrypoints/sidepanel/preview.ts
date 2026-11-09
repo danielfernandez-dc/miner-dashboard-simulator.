@@ -19,5 +19,5 @@ export function previewSnapshot(scenario: string): MinerSnapshot {
   const stamp = '[2026-11-09 10:24:11.000] ';
   const lines = scenario === 'empty' ? [] : scenario === 'recovered'
     ? [messages.chain, 'INFO system: Fault conditions cleared; miner resumed normal operation'] : [messages[scenario] ?? messages.chain];
-  return {text: lines.map(s => stamp + s).join('\n'), name: 'Antminer S19 Pro', host: 'atlas-lab · Design preview', complete: true, readAt: Date.now(), tabId: -1};
+  return {text: lines.map(s => stamp + s).join('\n'), name: 'Antminer S19 Pro', host: 'atlas-lab · Design preview', origin: 'https://preview.invalid', complete: true, readAt: Date.now(), tabId: -1};
 }

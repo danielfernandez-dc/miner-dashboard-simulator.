@@ -16,8 +16,8 @@ export default defineConfig({
   manifest: {
     name: 'Atlas · Miner troubleshooting',
     description: 'Read simulator miner logs and find the next troubleshooting steps locally.',
-    minimum_chrome_version: '116',
-    permissions: ['sidePanel', 'storage', 'activeTab', 'scripting'],
+    minimum_chrome_version: '142',
+    permissions: ['sidePanel', 'storage', 'activeTab', 'scripting', 'browsingData'],
     action: { default_title: 'Open Atlas' },
   },
 });

@@ -17,7 +17,7 @@ it('requests full logs and closes its temporary channel', async () => {
     postMessage(message: string) { expect(message).toBe('request'); queueMicrotask(() => this.onmessage?.({data: {text: 'complete unfiltered log'}})); }
   }
   vi.stubGlobal('BroadcastChannel', Channel);
-  vi.stubGlobal('location', {host: 'localhost:8080', href: 'http://localhost:8080/'});
+  vi.stubGlobal('location', {host: 'localhost:8080', origin: 'http://localhost:8080', href: 'http://localhost:8080/'});
   vi.stubGlobal('document', {querySelector: (s: string) => s === '#raw-log' ? {href: 'http://localhost:8080/raw-log.html?session=test'} : s === '.page-heading h1' ? {firstChild: {textContent: 'Antminer S19 Pro '}} : {}});
   expect(await readSimulatorPage()).toMatchObject({text: 'complete unfiltered log', complete: true, name: 'Antminer S19 Pro'});
   expect(close).toHaveBeenCalledOnce();

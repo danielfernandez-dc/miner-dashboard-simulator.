@@ -1,6 +1,6 @@
 /** Coordinates the Atlas workflow: load the cached rule library, read the active
  * simulator, and render Diagnosis. Findings and selection live only in React;
- * the library service alone persists rules. Preview mode is explicitly labeled
+ * the library service persists rules and the background worker archives unknown errors. Preview mode is explicitly labeled
  * and uses local fixtures, never pretending to have connected to a miner. */
 import { useEffect, useRef, useState } from 'react';
 import { browser } from 'wxt/browser';
@@ -9,6 +9,9 @@ import { Diagnosis } from '../../features/diagnostics/Diagnosis';
 import { readMiner, type MinerSnapshot } from '../../features/miner/readMiner';
 import { loadLibrary, validateLibrary } from '../../features/rules/library';
 import type { RuleLibrary } from '../../features/rules/types';
+import { UnknownErrors } from '../../features/errors/UnknownErrors';
+import { makeUnknownErrors } from '../../features/errors/archive';
+import type { CacheResult } from '../../features/cache/clearPageCache';
 import { previewSnapshot, previewScenarios } from './preview';
 
 const preview = !browser?.runtime?.id;
@@ -18,6 +21,7 @@ export function App() {
   const [busy, setBusy] = useState(true);
   const [error, setError] = useState('');
   const [warning, setWarning] = useState('');
+  const [cache, setCache] = useState<CacheResult | {status: 'clearing'; message: string}>();
   const [selected, setSelected] = useState('');
   const [scenario, setScenario] = useState('chain');
   const [library, setLibrary] = useState<RuleLibrary>();
@@ -36,11 +40,25 @@ export function App() {
           })
         : loadLibrary();
       const {library: rules, warning: cacheWarning} = await libraryPromise.current;
+      if (!preview) {
+        setCache({status: 'clearing', message: 'Clearing this website’s page cache… Logins and saved site data are kept.'});
+        // Cache deletion may take tens of seconds; reading logs need not wait.
+        void browser.runtime.sendMessage({type: 'atlas:prepare-read'}).then((result: CacheResult) => {
+          if (generation === request.current) setCache(result);
+        }).catch(() => {if (generation === request.current) setCache({status: 'failed', completedAt: Date.now(), message: 'Unable to confirm cache clearing. Close Atlas and open it again to retry.'});});
+      }
       const snapshot = preview ? previewSnapshot(nextScenario) : await readMiner();
       if (generation !== request.current) return;
       targetTab.current = snapshot.tabId;
       const analysis = analyze(snapshot.text, rules);
       setLibrary(rules); setWarning(cacheWarning ?? ''); setView({snapshot, analysis});
+      if (!preview && analysis.unknownEntries.length) {
+        try {
+          const incoming = await makeUnknownErrors(analysis.unknownEntries, snapshot.origin, snapshot.name);
+          const saved = await browser.runtime.sendMessage({type: 'atlas:archive-errors', archive: incoming});
+          if (saved?.error) throw new Error(saved.error);
+        } catch {if (generation === request.current) setWarning('The diagnosis is available, but unknown errors could not be saved. Read again to retry.');}
+      }
     } catch (e) {
       if (generation !== request.current) return;
       libraryPromise.current = null;
@@ -63,6 +81,7 @@ export function App() {
     <header className="panel-header"><div><div className="brand"><span className="brand-mark" aria-hidden="true">◩</span> ATLAS</div><p>Miner troubleshooting</p></div><button className="icon-button" aria-label="Close Atlas" onClick={() => window.close()}>×</button></header>
     {preview && <aside className="preview-bar"><strong>Design preview · simulated data</strong><label htmlFor="preview-scenario">Preview scenario</label><select id="preview-scenario" value={scenario} onChange={e => {setScenario(e.target.value); void read(e.target.value);}}>{previewScenarios.map(s => <option key={s.id} value={s.id}>{s.label}</option>)}</select></aside>}
     <main>
+      {cache && <p className={`cache-status ${cache.status}`} role="status">{cache.message}</p>}
       <div className="miner-card"><div className="miner-label">CURRENT MINER</div><h1>{view?.snapshot.name ?? 'Miner Lab simulator'}</h1><p>{view?.snapshot.host ?? 'Open the simulator to begin'}</p><span className="source-tag">Simulator</span></div>
       <div aria-live="polite" aria-busy={busy}>
         {busy ? <section className="state-card"><span className="spinner" aria-hidden="true"/><h2>Reading miner…</h2><p>Checking the troubleshooting library and latest logs.</p></section>
@@ -76,6 +95,7 @@ export function App() {
       {warning && <p className="notice">{warning}</p>}
       <button className="primary-button w-full transition-colors hover:bg-[#ffae35] disabled:opacity-50" disabled={busy} onClick={() => void read()}><span aria-hidden="true">↻</span> {busy ? 'Reading logs…' : 'Read logs again'}</button>
       {view && <p className="read-time">Snapshot read at {new Date(view.snapshot.readAt).toLocaleTimeString([], {hour: '2-digit', minute: '2-digit', second: '2-digit'})} · {view.analysis.parsed} {view.analysis.parsed === 1 ? 'entry' : 'entries'}</p>}
+      {!preview && <UnknownErrors/>}
     </main>
     <footer><span className="footer-dot"/> {preview ? 'Preview only' : 'Simulator data'} · Processed in your browser{library && <span className="rules-version">Rules {library.rulesVersion}</span>}</footer>
   </div>;
