@@ -11,7 +11,8 @@ import { loadLibrary, validateLibrary } from '../../features/rules/library';
 import type { RuleLibrary } from '../../features/rules/types';
 import { UnknownErrors } from '../../features/errors/UnknownErrors';
 import { makeUnknownErrors } from '../../features/errors/archive';
-import type { CacheResult } from '../../features/cache/clearPageCache';
+import type {ClearingResult} from '../../features/site-data/clearSiteData';
+import {ClearingAccess} from '../../features/site-data/ClearingAccess';
 import { previewSnapshot, previewScenarios } from './preview';
 
 const preview = !browser?.runtime?.id;
@@ -21,7 +22,7 @@ export function App() {
   const [busy, setBusy] = useState(true);
   const [error, setError] = useState('');
   const [warning, setWarning] = useState('');
-  const [cache, setCache] = useState<CacheResult | {status: 'clearing'; message: string}>();
+  const [clearing, setClearing] = useState<ClearingResult | {status: 'clearing'; message: string}>();
   const [selected, setSelected] = useState('');
   const [scenario, setScenario] = useState('chain');
   const [library, setLibrary] = useState<RuleLibrary>();
@@ -41,11 +42,11 @@ export function App() {
         : loadLibrary();
       const {library: rules, warning: cacheWarning} = await libraryPromise.current;
       if (!preview) {
-        setCache({status: 'clearing', message: 'Clearing this website’s page cache… Logins and saved site data are kept.'});
-        // Cache deletion may take tens of seconds; reading logs need not wait.
-        void browser.runtime.sendMessage({type: 'atlas:prepare-read'}).then((result: CacheResult) => {
-          if (generation === request.current) setCache(result);
-        }).catch(() => {if (generation === request.current) setCache({status: 'failed', completedAt: Date.now(), message: 'Unable to confirm cache clearing. Close Atlas and open it again to retry.'});});
+        setClearing({status: 'clearing', message: 'Clearing this website’s stored data, cookies, and service workers… This can sign you out.'});
+        // Stored-data deletion may take tens of seconds; reading logs need not wait.
+        void browser.runtime.sendMessage({type: 'atlas:prepare-read'}).then((result: ClearingResult) => {
+          if (generation === request.current) setClearing(result);
+        }).catch(() => {if (generation === request.current) setClearing({status: 'failed', completedAt: Date.now(), message: 'Unable to confirm site-data clearing. Close Atlas and open it again to retry.'});});
       }
       const snapshot = preview ? previewSnapshot(nextScenario) : await readMiner();
       if (generation !== request.current) return;
@@ -78,10 +79,11 @@ export function App() {
   const findings = view?.analysis.findings ?? [];
   const finding = findings.find(f => f.key === selected) ?? findings[0];
   return <div className={`panel-shell${preview ? ' preview-shell' : ''}`}>
-    <header className="panel-header"><div><div className="brand"><span className="brand-mark" aria-hidden="true">◩</span> ATLAS</div><p>Miner troubleshooting</p></div><button className="icon-button" aria-label="Close Atlas" onClick={() => window.close()}>×</button></header>
+    <header className="panel-header"><div><div className="brand"><img className="brand-mark" src="/atlas-mark.svg" alt=""/> ATLAS</div><p>Miner troubleshooting</p></div><button className="icon-button" aria-label="Close Atlas" onClick={() => window.close()}>×</button></header>
     {preview && <aside className="preview-bar"><strong>Design preview · simulated data</strong><label htmlFor="preview-scenario">Preview scenario</label><select id="preview-scenario" value={scenario} onChange={e => {setScenario(e.target.value); void read(e.target.value);}}>{previewScenarios.map(s => <option key={s.id} value={s.id}>{s.label}</option>)}</select></aside>}
     <main>
-      {cache && <p className={`cache-status ${cache.status}`} role="status">{cache.message}</p>}
+      {clearing && <p className={`clearing-status ${clearing.status}`} role="status">{clearing.message}</p>}
+      {clearing && 'needsAccess' in clearing && clearing.needsAccess && <ClearingAccess onGranted={() => void read()}/>}
       <div className="miner-card"><div className="miner-label">CURRENT MINER</div><h1>{view?.snapshot.name ?? 'Miner Lab simulator'}</h1><p>{view?.snapshot.host ?? 'Open the simulator to begin'}</p><span className="source-tag">Simulator</span></div>
       <div aria-live="polite" aria-busy={busy}>
         {busy ? <section className="state-card"><span className="spinner" aria-hidden="true"/><h2>Reading miner…</h2><p>Checking the troubleshooting library and latest logs.</p></section>

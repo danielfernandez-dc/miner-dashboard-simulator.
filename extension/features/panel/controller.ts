@@ -2,11 +2,11 @@
  * Per-window visibility survives worker suspension in session storage and is
  * updated by native panel events. Opening stays synchronous with Chrome's gesture. */
 import { browser } from 'wxt/browser';
-import { clearPageCache, type CacheResult } from '../cache/clearPageCache';
+import {clearSiteData, type ClearingResult} from '../site-data/clearSiteData';
 const prefix = 'atlasPanelOpen:';
 export function installPanelController() {
   const visibility = new Map<number, boolean>();
-  const jobs = new Map<number, Promise<CacheResult>>();
+  const jobs = new Map<number, Promise<ClearingResult>>();
   let hydrated = false;
   const initial = browser.storage.session.get(null).then(values => {
     for (const [key, value] of Object.entries(values)) if (key.startsWith(prefix)) {
@@ -19,9 +19,9 @@ export function installPanelController() {
     visibility.set(windowId, open);
     void browser.storage.session.set({[`${prefix}${windowId}`]: open}).catch(console.error);
   };
-  const startCache = (windowId: number, url?: string) => {
+  const startClearing = (windowId: number, url?: string, tabId?: number) => {
     let job = jobs.get(windowId);
-    if (!job) {job = clearPageCache(url); jobs.set(windowId, job);}
+    if (!job) {job = clearSiteData(url, tabId); jobs.set(windowId, job);}
     return job;
   };
   const close = (windowId: number) => {
@@ -43,11 +43,12 @@ export function installPanelController() {
     void wasOpen.then(async previouslyOpen => {
       await opening;
       if (previouslyOpen) close(tab.windowId);
-      else {remember(tab.windowId, true); void startCache(tab.windowId, tab.url);}
+      else {remember(tab.windowId, true); void startClearing(tab.windowId, tab.url, tab.id);}
     }).catch(error => {remember(tab.windowId, false); console.error(error);});
   });
-  return async function prepareRead(): Promise<CacheResult> {
+  return async function prepareRead(reset = false): Promise<ClearingResult> {
     const [tab] = await browser.tabs.query({active:true, currentWindow:true});
-    return tab ? startCache(tab.windowId, tab.url) : clearPageCache();
+    if (reset && tab) jobs.delete(tab.windowId);
+    return tab ? startClearing(tab.windowId, tab.url, tab.id) : clearSiteData();
   };
 }

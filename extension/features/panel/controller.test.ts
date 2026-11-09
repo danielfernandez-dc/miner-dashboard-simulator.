@@ -7,7 +7,7 @@ vi.mock('wxt/browser', () => ({browser: {
   sidePanel: {onOpened:{addListener:api.opened}, onClosed:{addListener:api.closed}, setPanelBehavior:api.behavior, open:api.open, close:api.close},
   action:{onClicked:{addListener:api.click}}, tabs:{query:api.query},
 }}));
-vi.mock('../cache/clearPageCache', () => ({clearPageCache:api.clear}));
+vi.mock('../site-data/clearSiteData', () => ({clearSiteData:api.clear}));
 import {installPanelController} from './controller';
 const tab = {id:7,windowId:3,url:'https://www.youtube.com/'};
 beforeEach(() => {vi.resetAllMocks(); for (const mock of [api.behavior,api.open,api.close,api.set]) mock.mockResolvedValue(undefined); api.get.mockResolvedValue({}); api.clear.mockResolvedValue({status:'cleared'}); api.query.mockResolvedValue([tab]);});
