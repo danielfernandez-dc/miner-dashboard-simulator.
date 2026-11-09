@@ -4,6 +4,7 @@ export const scenarios = {
   fan: ['Fan failure', 'ERROR', 'system', 'Fan 2 speed 0 RPM below minimum 1000 RPM; fan lost, mining stopped'],
   pool: ['Pool disconnected', 'ERROR', 'miner', 'Stratum connection to pool 0 interrupted: connection timed out; reconnecting'],
   chain: ['Missing hashboard', 'ERROR', 'miner', 'Chain 2 ASIC enumeration failed: found 0 of 126 chips; hashboard disabled'],
+  unknown: ['Unknown error (Atlas test)', 'ERROR', 'miner', 'Unrecognized diagnostic code 999; technician review required'],
   psu: ['Power supply fault', 'ERROR', 'system', 'PSU voltage abnormal: 10.2 V; power supply initialization failed'],
 };
 export function createSimulator() {
@@ -44,7 +45,7 @@ export function createSimulator() {
   };
   const snapshot = () => {
     const s = state.scenario;
-    const stopped = ['fan', 'temperature', 'psu'].includes(s);
+    const stopped = ['fan', 'temperature', 'psu', 'unknown'].includes(s);
     const hashrate = stopped || s === 'pool' ? 0 : (s === 'chain' ? 73.2 : 110.4);
     return { ...state, uptime: Math.floor((Date.now() - state.started) / 1000), hashrate, temperature: s === 'temperature' ? 92 : 67, power: stopped ? 180 : s === 'chain' ? 2150 : 3250, fans: [5280, s === 'fan' ? 0 : 5340, 5160, 5220], errors: state.logs.filter(l => l.level === 'ERROR').length };
   };
