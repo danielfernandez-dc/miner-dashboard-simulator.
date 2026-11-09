@@ -8,4 +8,5 @@ for (const name of ['index.html', 'style.css', 'app.js', 'simulator.mjs', 'raw-l
   if (/\.(js|mjs)$/.test(name)) execFileSync(process.execPath, ['--check', fileURLToPath(path)], { stdio: 'inherit' });
 }
 JSON.parse(await readFile(new URL('vercel.json', root), 'utf8'));
+JSON.parse(await readFile(new URL('public/miner-error-rules.json', root), 'utf8'));
 console.log('Static site checked. Deployable output: public/');

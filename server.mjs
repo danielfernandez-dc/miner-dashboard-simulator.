@@ -9,6 +9,7 @@ const files = {
   '/style.css': ['style.css', 'text/css'],
   '/raw-log.html': ['raw-log.html', 'text/html'],
   '/raw-log.js': ['raw-log.js', 'text/javascript'],
+  '/miner-error-rules.json': ['miner-error-rules.json', 'application/json'],
 };
 const server = http.createServer(async (req, res) => {
   const file = files[new URL(req.url, 'http://localhost').pathname];
