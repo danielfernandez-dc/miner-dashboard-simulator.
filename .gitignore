@@ -5,3 +5,7 @@ node_modules/
 # Local export and preview artifacts
 miner-simulator-preview.png
 miner-simulator-vercel.zip
+
+# Atlas local deliverables and scratch verification files
+outputs/
+work/
