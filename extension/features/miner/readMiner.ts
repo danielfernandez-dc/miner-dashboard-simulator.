@@ -30,7 +30,9 @@ export async function readSimulatorPage(): Promise<{text: string; name: string; 
 }
 export async function readMiner(): Promise<MinerSnapshot> {
   const [tab] = await browser.tabs.query({active: true, currentWindow: true});
-  if (!tab?.id || !supportsMiner(tab.url ?? '')) throw new Error('Open the Miner Lab simulator, then click the Atlas extension button on that tab.');
+  if (tab?.id === undefined) throw new Error('No active browser tab was found. Open the simulator and click Atlas again.');
+  if (!tab.url) throw new Error('Chrome has not granted page access. Click the Atlas extension button on the simulator tab, then read again.');
+  if (!supportsMiner(tab.url)) throw new Error('Open the Miner Lab simulator dashboard, then click the Atlas extension button on that tab.');
   const results = await browser.scripting.executeScript({target: {tabId: tab.id}, world: 'MAIN', func: readSimulatorPage});
   const value = results[0]?.result;
   if (!value || typeof value.text !== 'string' || value.text.length > 2_000_000 || !value.complete || typeof value.name !== 'string' || typeof value.host !== 'string') throw new Error('The simulator returned an invalid log snapshot.');

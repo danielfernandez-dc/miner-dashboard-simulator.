@@ -47,3 +47,5 @@ The complete retained log is limited by the simulator to 2,000 lines. Events pre
 ## Verification
 
 `extension:check` type-checks the extension and runs tests for all simulator faults, placeholders, component grouping, recovery/recurrence, unknown faults, boot boundaries, malformed logs, cache initialization/repair/failure, supported URLs, and complete-buffer reading. `extension:build` creates the Manifest V3 package. UI design preview uses explicit local fixtures and is not proof of Chrome permission or toolbar behavior; those require a loaded-extension check in Chrome.
+
+Local Chrome verification completed: loaded the unpacked build, opened Atlas through its action button, diagnosed the hosted simulator's missing hashboard, reread after recovery, and confirmed recovery remained recognized with the dashboard filtered to Errors only. The action uses an explicit click listener so Chrome grants temporary page access before the panel reads the selected tab.
