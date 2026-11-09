@@ -1,0 +1,179 @@
+{
+  "schemaVersion": 1,
+  "rulesVersion": "0.2.0",
+  "source": "vnish-dashboard-simulator",
+  "rules": [
+    {
+      "id": "hashboard-enumeration-failed",
+      "severity": "error",
+      "match": {
+        "type": "regex",
+        "source": "miner",
+        "pattern": "^Chain (?<chain>\\d+) ASIC enumeration failed: found (?<found>\\d+) of (?<expected>\\d+) chips; hashboard disabled$",
+        "flags": "i"
+      },
+      "title": "Chain {{chain}} not detected",
+      "summary": "{{found}} of {{expected}} chips detected. The hashboard is disabled.",
+      "procedureStatus": "draft",
+      "steps": [
+        {
+          "id": "shutdown",
+          "title": "Power down safely",
+          "instruction": "Follow your site shutdown procedure."
+        },
+        {
+          "id": "inspect",
+          "title": "Check connections",
+          "instruction": "With power isolated, follow the approved cable inspection procedure for Chain {{chain}}."
+        },
+        {
+          "id": "retest",
+          "title": "Retest the miner",
+          "instruction": "After the approved checks, restart and read the logs again."
+        }
+      ]
+    },
+    {
+      "id": "chip-temperature-limit-exceeded",
+      "severity": "error",
+      "match": {
+        "type": "regex",
+        "source": "miner",
+        "pattern": "^Chain (?<chain>\\d+) chip temperature (?<temperature>\\d+) C exceeds limit (?<limit>\\d+) C; thermal protection activated$",
+        "flags": "i"
+      },
+      "title": "Chain {{chain}} temperature limit exceeded",
+      "summary": "Chip temperature is {{temperature}} C, above the {{limit}} C limit. Thermal protection has stopped mining.",
+      "procedureStatus": "draft",
+      "steps": [
+        {
+          "id": "shutdown",
+          "title": "Follow the thermal shutdown procedure",
+          "instruction": "Follow your site's approved shutdown and cooldown procedure. Keep thermal protection enabled."
+        },
+        {
+          "id": "inspect-cooling",
+          "title": "Check the cooling conditions",
+          "instruction": "Have an authorized technician check airflow, ventilation, and cooling for Chain {{chain}} under the approved site procedure. Isolate power before physical inspection."
+        },
+        {
+          "id": "retest",
+          "title": "Confirm temperature recovery",
+          "instruction": "After the approved checks and cooldown, restart under the site procedure and verify that temperatures remain within the approved operating range and the error does not return."
+        }
+      ]
+    },
+    {
+      "id": "fan-speed-below-minimum",
+      "severity": "error",
+      "match": {
+        "type": "regex",
+        "source": "system",
+        "pattern": "^Fan (?<fan>\\d+) speed (?<rpm>\\d+) RPM below minimum (?<minimum>\\d+) RPM; fan lost, mining stopped$",
+        "flags": "i"
+      },
+      "title": "Fan {{fan}} speed below minimum",
+      "summary": "Fan {{fan}} reports {{rpm}} RPM, below the {{minimum}} RPM minimum. Mining has stopped because of the fan fault.",
+      "procedureStatus": "draft",
+      "steps": [
+        {
+          "id": "shutdown",
+          "title": "Power down safely",
+          "instruction": "Follow your site's approved shutdown and power isolation procedure before inspecting Fan {{fan}}."
+        },
+        {
+          "id": "inspect-fan",
+          "title": "Check the fan and its connection",
+          "instruction": "Have an authorized technician inspect Fan {{fan}} and its connection under the approved maintenance procedure. Follow that procedure for any repair or replacement; keep fan protection enabled."
+        },
+        {
+          "id": "retest",
+          "title": "Verify fan recovery",
+          "instruction": "After the approved checks, restart under the site procedure. Confirm Fan {{fan}} meets the approved speed requirement and the fan fault does not return."
+        }
+      ]
+    },
+    {
+      "id": "pool-connection-interrupted",
+      "severity": "error",
+      "match": {
+        "type": "regex",
+        "source": "miner",
+        "pattern": "^Stratum connection to pool (?<pool>\\d+) interrupted: (?<reason>.+); reconnecting$",
+        "flags": "i"
+      },
+      "title": "Pool {{pool}} disconnected",
+      "summary": "The pool connection was interrupted: {{reason}}. The miner is attempting to reconnect.",
+      "procedureStatus": "draft",
+      "steps": [
+        {
+          "id": "check-network",
+          "title": "Check network connectivity",
+          "instruction": "Follow your site's approved network checks for the miner and pool connection."
+        },
+        {
+          "id": "check-pool",
+          "title": "Check pool settings and availability",
+          "instruction": "Verify the configured pool address, port, and worker settings under the approved site procedure."
+        },
+        {
+          "id": "retest",
+          "title": "Confirm the connection recovers",
+          "instruction": "Read the logs again and verify that the pool connection is restored and accepted shares resume."
+        }
+      ]
+    },
+    {
+      "id": "power-supply-initialization-failed",
+      "severity": "error",
+      "match": {
+        "type": "regex",
+        "source": "system",
+        "pattern": "^PSU voltage abnormal: (?<voltage>\\d+(?:\\.\\d+)?) V; power supply initialization failed$",
+        "flags": "i"
+      },
+      "title": "Power supply initialization failed",
+      "summary": "The PSU reports abnormal voltage of {{voltage}} V. Power supply initialization failed.",
+      "procedureStatus": "draft",
+      "steps": [
+        {
+          "id": "shutdown",
+          "title": "Power down safely",
+          "instruction": "Follow your site's approved shutdown and power isolation procedure."
+        },
+        {
+          "id": "inspect-power",
+          "title": "Request an authorized power check",
+          "instruction": "Have an authorized technician inspect the supply and external connections under the approved site procedure. Do not open the PSU."
+        },
+        {
+          "id": "retest",
+          "title": "Verify power recovery",
+          "instruction": "After the approved checks or repair, restart under the site procedure and read the logs again. Confirm the PSU fault does not return."
+        }
+      ]
+    }
+  ],
+  "recoveryRules": [
+    {
+      "id": "simulator-faults-cleared",
+      "severity": "info",
+      "match": {
+        "type": "regex",
+        "source": "system",
+        "pattern": "^Fault conditions cleared; miner resumed normal operation$",
+        "flags": "i"
+      },
+      "effect": "clear-active-faults",
+      "clearsRuleIds": [
+        "hashboard-enumeration-failed",
+        "chip-temperature-limit-exceeded",
+        "fan-speed-below-minimum",
+        "pool-connection-interrupted",
+        "power-supply-initialization-failed"
+      ],
+      "title": "Miner resumed normal operation",
+      "summary": "The simulator reports that fault conditions have cleared."
+    }
+  ]
+}

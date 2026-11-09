@@ -2,6 +2,16 @@
   "name": "miner-lab-simulator",
   "private": true,
   "type": "module",
-  "scripts": { "start": "node server.mjs", "build": "node scripts/build.mjs", "test": "node --test" },
-  "engines": { "node": ">=20" }
+  "scripts": {
+    "start": "node server.mjs",
+    "build": "node scripts/build.mjs",
+    "test": "node --test",
+    "extension:dev": "npm --prefix extension run dev",
+    "extension:build": "npm --prefix extension run build",
+    "extension:check": "npm --prefix extension run typecheck && npm --prefix extension test",
+    "extension:zip": "npm --prefix extension run zip"
+  },
+  "engines": {
+    "node": ">=20"
+  }
 }
